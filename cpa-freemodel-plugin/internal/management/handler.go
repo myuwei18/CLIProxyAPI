@@ -584,26 +584,29 @@ func statusHTML() string {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CPA FreeModel Operations</title>
   <style>
-    :root { color-scheme: light; --bg:#f5f7fb; --panel:#fff; --text:#172033; --muted:#687083; --line:#e5e9f2; --blue:#2563eb; --green:#059669; --amber:#d97706; --red:#dc2626; --shadow:0 14px 40px rgba(23,32,51,.08); }
+    :root { color-scheme: light dark; --bg:#f5f7fb; --panel:#fff; --text:#172033; --muted:#687083; --line:#e5e9f2; --blue:#2563eb; --green:#059669; --amber:#d97706; --red:#dc2626; --shadow:0 14px 40px rgba(23,32,51,.08); --input:#fff; --thead:#f8fafc; --code-bg:#eef2ff; --code-text:#1e40af; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#0b1020; --panel:#111827; --text:#e5e7eb; --muted:#9ca3af; --line:#253044; --blue:#60a5fa; --green:#34d399; --amber:#fbbf24; --red:#f87171; --shadow:0 14px 40px rgba(0,0,0,.35); --input:#0f172a; --thead:#0f172a; --code-bg:#172554; --code-text:#bfdbfe; } }
+    :root[data-theme="dark"] { --bg:#0b1020; --panel:#111827; --text:#e5e7eb; --muted:#9ca3af; --line:#253044; --blue:#60a5fa; --green:#34d399; --amber:#fbbf24; --red:#f87171; --shadow:0 14px 40px rgba(0,0,0,.35); --input:#0f172a; --thead:#0f172a; --code-bg:#172554; --code-text:#bfdbfe; }
+    :root[data-theme="light"] { --bg:#f5f7fb; --panel:#fff; --text:#172033; --muted:#687083; --line:#e5e9f2; --blue:#2563eb; --green:#059669; --amber:#d97706; --red:#dc2626; --shadow:0 14px 40px rgba(23,32,51,.08); --input:#fff; --thead:#f8fafc; --code-bg:#eef2ff; --code-text:#1e40af; }
     * { box-sizing: border-box; }
-    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; background:linear-gradient(180deg,#eef4ff 0,#f7f8fb 260px); color:var(--text); }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; background:var(--bg); color:var(--text); }
     main { max-width:1280px; margin:0 auto; padding:32px 24px 56px; }
     header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:24px; }
     h1 { margin:0 0 8px; font-size:30px; letter-spacing:-.03em; }
     h2 { margin:0 0 16px; font-size:18px; }
     p { margin:0; color:var(--muted); line-height:1.65; }
-    code { background:#eef2ff; border:1px solid #dbe4ff; color:#1e40af; border-radius:7px; padding:2px 6px; }
+    code { background:var(--code-bg); border:1px solid var(--line); color:var(--code-text); border-radius:7px; padding:2px 6px; }
     button, input, textarea, select { font:inherit; }
     button { border:0; border-radius:10px; padding:10px 14px; background:var(--blue); color:#fff; cursor:pointer; font-weight:700; box-shadow:0 8px 18px rgba(37,99,235,.22); }
-    button.secondary { background:#fff; color:#263348; border:1px solid var(--line); box-shadow:none; }
+    button.secondary { background:var(--panel); color:var(--text); border:1px solid var(--line); box-shadow:none; }
     button.danger { background:#dc2626; }
     button:disabled { opacity:.55; cursor:not-allowed; }
-    input, textarea, select { width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#fff; color:var(--text); }
+    input, textarea, select { width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--input); color:var(--text); }
     textarea { min-height:132px; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:12px; }
-    label { display:block; color:#394257; font-size:12px; font-weight:800; margin:0 0 6px; }
+    label { display:block; color:var(--muted); font-size:12px; font-weight:800; margin:0 0 6px; }
     .top-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
     .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
-    .card { background:rgba(255,255,255,.92); border:1px solid var(--line); border-radius:18px; padding:18px; box-shadow:var(--shadow); backdrop-filter:blur(10px); }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:18px; box-shadow:var(--shadow); }
     .span-3 { grid-column:span 3; } .span-4 { grid-column:span 4; } .span-5 { grid-column:span 5; } .span-7 { grid-column:span 7; } .span-12 { grid-column:span 12; }
     .metric { display:flex; flex-direction:column; gap:8px; min-height:122px; }
     .metric .label { color:var(--muted); font-size:13px; font-weight:700; }
@@ -613,19 +616,22 @@ func statusHTML() string {
     .pill.ok { background:#dcfce7; color:#166534; } .pill.warn { background:#fef3c7; color:#92400e; } .pill.err { background:#fee2e2; color:#991b1b; } .pill.gray { background:#f1f5f9; color:#475569; }
     .toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
     .tabs { display:flex; gap:8px; flex-wrap:wrap; }
-    .tab { background:#fff; color:#263348; border:1px solid var(--line); box-shadow:none; padding:8px 12px; }
-    .tab.active { background:#172033; color:#fff; border-color:#172033; }
+    .tab { background:var(--panel); color:var(--text); border:1px solid var(--line); box-shadow:none; padding:8px 12px; }
+    .tab.active { background:var(--text); color:var(--panel); border-color:var(--text); }
     table { width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; }
     th, td { text-align:left; padding:12px 10px; border-bottom:1px solid var(--line); vertical-align:top; font-size:13px; }
-    th { color:#5b6476; font-size:12px; text-transform:uppercase; letter-spacing:.04em; background:#f8fafc; }
+    th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; background:var(--thead); }
     tr:last-child td { border-bottom:0; }
     .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:14px; }
     .muted { color:var(--muted); }
     .money { font-variant-numeric:tabular-nums; font-weight:800; }
     .forms { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
     .form-row { margin-bottom:12px; }
-    .notice { border:1px solid #bfdbfe; background:#eff6ff; color:#1e3a8a; border-radius:14px; padding:12px 14px; line-height:1.55; }
+    .notice { border:1px solid var(--line); background:var(--thead); color:var(--text); border-radius:14px; padding:12px 14px; line-height:1.55; }
     .errorbox { display:none; border:1px solid #fecaca; background:#fef2f2; color:#991b1b; border-radius:14px; padding:12px 14px; margin-bottom:16px; white-space:pre-wrap; }
+    :root[data-theme="dark"] .errorbox { background:#450a0a; color:#fecaca; border-color:#7f1d1d; }
+    .authbar { display:flex; align-items:end; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+    .authbar .field { width:260px; }
     .small { font-size:12px; }
     .right { text-align:right; }
     @media (max-width:960px) { .span-3,.span-4,.span-5,.span-7 { grid-column:span 12; } header { flex-direction:column; } .forms { grid-template-columns:1fr; } }
@@ -645,6 +651,13 @@ func statusHTML() string {
       <a href="/management.html#/plugins"><button class="secondary">返回插件管理</button></a>
     </div>
   </header>
+
+  <div class="card authbar">
+    <div class="field"><label>管理密码</label><input id="managementKey" type="password" placeholder="本地 PoC 默认 cpa" autocomplete="current-password"></div>
+    <button id="saveKeyBtn" class="secondary">保存并刷新</button>
+    <button id="clearKeyBtn" class="secondary">清除</button>
+    <span class="muted small">登录后台不等于插件页自动带管理 key；这里保存到当前浏览器 localStorage。</span>
+  </div>
 
   <div id="errorBox" class="errorbox"></div>
 
@@ -726,27 +739,38 @@ func statusHTML() string {
 </main>
 <script>
 const api = '/v0/management/freemodel-plugin';
+const keyStorageName = 'cpa_freemodel_management_key';
 let currentView = 'all';
+(function initTheme(){
+  const saved = localStorage.getItem('theme') || localStorage.getItem('cpa_theme') || localStorage.getItem('vite-ui-theme');
+  if(saved === 'dark' || saved === 'light') document.documentElement.dataset.theme = saved;
+})();
+function managementHeaders(extra){
+  const key = (localStorage.getItem(keyStorageName) || '').trim();
+  const headers = Object.assign({}, extra || {});
+  if(key) headers['X-Management-Key'] = key;
+  return headers;
+}
 function money(cents){ return '$' + ((Number(cents || 0))/100).toFixed(2); }
 function text(v){ return (v === undefined || v === null || v === '') ? '--' : String(v); }
 function esc(v){ return text(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 function pill(label, kind){ return '<span class="pill '+kind+'">'+esc(label)+'</span>'; }
-function showError(err){ const el=document.getElementById('errorBox'); el.style.display='block'; el.textContent=err && err.message ? err.message : String(err); }
+function showError(err){ const el=document.getElementById('errorBox'); el.style.display='block'; const msg = err && err.message ? err.message : String(err); el.textContent = (msg.includes('missing management key') || msg.includes('invalid management key') || msg.includes('HTTP 401')) ? msg + '\n请在上方填写管理密码，本地 PoC 默认：cpa。' : msg; }
 function clearError(){ const el=document.getElementById('errorBox'); el.style.display='none'; el.textContent=''; }
 async function getJSON(path){
-  const res = await fetch(api + path, { credentials:'same-origin' });
+  const res = await fetch(api + path, { credentials:'same-origin', headers: managementHeaders() });
   const data = await res.json().catch(() => ({}));
   if(!res.ok || data.success === false || data.error){ throw new Error(data.message || data.error || ('HTTP '+res.status)); }
   return data;
 }
 async function postJSON(path, body){
-  const res = await fetch(api + path, { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  const res = await fetch(api + path, { method:'POST', credentials:'same-origin', headers: managementHeaders({'Content-Type':'application/json'}), body:JSON.stringify(body) });
   const data = await res.json().catch(() => ({}));
   if(!res.ok || data.success === false || data.error){ throw new Error(data.message || data.error || ('HTTP '+res.status)); }
   return data;
 }
 async function patchJSON(path, body){
-  const res = await fetch(api + path, { method:'PATCH', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  const res = await fetch(api + path, { method:'PATCH', credentials:'same-origin', headers: managementHeaders({'Content-Type':'application/json'}), body:JSON.stringify(body) });
   const data = await res.json().catch(() => ({}));
   if(!res.ok || data.success === false || data.error){ throw new Error(data.message || data.error || ('HTTP '+res.status)); }
   return data;
@@ -787,6 +811,11 @@ async function load(){
     renderIncidents(incidents.data || []);
   } catch(err) { showError(err); }
 }
+const keyInput = document.getElementById('managementKey');
+keyInput.value = localStorage.getItem(keyStorageName) || 'cpa';
+document.getElementById('saveKeyBtn').addEventListener('click', () => { localStorage.setItem(keyStorageName, keyInput.value.trim()); load(); });
+document.getElementById('clearKeyBtn').addEventListener('click', () => { localStorage.removeItem(keyStorageName); keyInput.value = ''; load(); });
+if(!localStorage.getItem(keyStorageName) && keyInput.value) localStorage.setItem(keyStorageName, keyInput.value);
 document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); currentView = btn.dataset.view; load(); }));
 document.getElementById('refreshBtn').addEventListener('click', load);
 document.getElementById('syncBtn').addEventListener('click', async () => { clearError(); try { await postJSON('/sync', {}); await load(); } catch(err) { showError(err); } });

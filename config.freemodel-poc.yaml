@@ -2,7 +2,7 @@ host: "127.0.0.1"
 port: 8317
 remote-management:
   allow-remote: false
-  secret-key: "$2a$10$cBn6rLk3mrHEN1cGvklqv.udos3akyg1Vk2zDx0ST9PpExj6FjTeq"
+  secret-key: "$2a$10$tqF/1WCCOqOMdmgxH/39tuDHSaDhmFks2z6apvF5VRzUSYcdROTDa"
   disable-control-panel: false
   disable-auto-update-panel: true
 auth-dir: "auths"
