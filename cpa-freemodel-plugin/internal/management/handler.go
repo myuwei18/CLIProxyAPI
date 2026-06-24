@@ -580,255 +580,41 @@ func statusHTML() string {
 	return `<!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CPA FreeModel Operations</title>
-  <style>
-    :root { color-scheme: light dark; --bg:#f5f7fb; --panel:#fff; --text:#172033; --muted:#687083; --line:#e5e9f2; --blue:#2563eb; --green:#059669; --amber:#d97706; --red:#dc2626; --shadow:0 14px 40px rgba(23,32,51,.08); --input:#fff; --thead:#f8fafc; --code-bg:#eef2ff; --code-text:#1e40af; }
-    @media (prefers-color-scheme: dark) { :root { --bg:#0b1020; --panel:#111827; --text:#e5e7eb; --muted:#9ca3af; --line:#253044; --blue:#60a5fa; --green:#34d399; --amber:#fbbf24; --red:#f87171; --shadow:0 14px 40px rgba(0,0,0,.35); --input:#0f172a; --thead:#0f172a; --code-bg:#172554; --code-text:#bfdbfe; } }
-    :root[data-theme="dark"] { --bg:#0b1020; --panel:#111827; --text:#e5e7eb; --muted:#9ca3af; --line:#253044; --blue:#60a5fa; --green:#34d399; --amber:#fbbf24; --red:#f87171; --shadow:0 14px 40px rgba(0,0,0,.35); --input:#0f172a; --thead:#0f172a; --code-bg:#172554; --code-text:#bfdbfe; }
-    :root[data-theme="light"] { --bg:#f5f7fb; --panel:#fff; --text:#172033; --muted:#687083; --line:#e5e9f2; --blue:#2563eb; --green:#059669; --amber:#d97706; --red:#dc2626; --shadow:0 14px 40px rgba(23,32,51,.08); --input:#fff; --thead:#f8fafc; --code-bg:#eef2ff; --code-text:#1e40af; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; background:var(--bg); color:var(--text); }
-    main { max-width:1280px; margin:0 auto; padding:32px 24px 56px; }
-    header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:24px; }
-    h1 { margin:0 0 8px; font-size:30px; letter-spacing:-.03em; }
-    h2 { margin:0 0 16px; font-size:18px; }
-    p { margin:0; color:var(--muted); line-height:1.65; }
-    code { background:var(--code-bg); border:1px solid var(--line); color:var(--code-text); border-radius:7px; padding:2px 6px; }
-    button, input, textarea, select { font:inherit; }
-    button { border:0; border-radius:10px; padding:10px 14px; background:var(--blue); color:#fff; cursor:pointer; font-weight:700; box-shadow:0 8px 18px rgba(37,99,235,.22); }
-    button.secondary { background:var(--panel); color:var(--text); border:1px solid var(--line); box-shadow:none; }
-    button.danger { background:#dc2626; }
-    button:disabled { opacity:.55; cursor:not-allowed; }
-    input, textarea, select { width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--input); color:var(--text); }
-    textarea { min-height:132px; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:12px; }
-    label { display:block; color:var(--muted); font-size:12px; font-weight:800; margin:0 0 6px; }
-    .top-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
-    .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
-    .card { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:18px; box-shadow:var(--shadow); }
-    .span-3 { grid-column:span 3; } .span-4 { grid-column:span 4; } .span-5 { grid-column:span 5; } .span-7 { grid-column:span 7; } .span-12 { grid-column:span 12; }
-    .metric { display:flex; flex-direction:column; gap:8px; min-height:122px; }
-    .metric .label { color:var(--muted); font-size:13px; font-weight:700; }
-    .metric .value { font-size:30px; font-weight:900; letter-spacing:-.04em; }
-    .metric .hint { color:var(--muted); font-size:12px; }
-    .pill { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:5px 9px; font-size:12px; font-weight:800; background:#eef2ff; color:#1e40af; }
-    .pill.ok { background:#dcfce7; color:#166534; } .pill.warn { background:#fef3c7; color:#92400e; } .pill.err { background:#fee2e2; color:#991b1b; } .pill.gray { background:#f1f5f9; color:#475569; }
-    .toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
-    .tabs { display:flex; gap:8px; flex-wrap:wrap; }
-    .tab { background:var(--panel); color:var(--text); border:1px solid var(--line); box-shadow:none; padding:8px 12px; }
-    .tab.active { background:var(--text); color:var(--panel); border-color:var(--text); }
-    table { width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; }
-    th, td { text-align:left; padding:12px 10px; border-bottom:1px solid var(--line); vertical-align:top; font-size:13px; }
-    th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; background:var(--thead); }
-    tr:last-child td { border-bottom:0; }
-    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:14px; }
-    .muted { color:var(--muted); }
-    .money { font-variant-numeric:tabular-nums; font-weight:800; }
-    .forms { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
-    .form-row { margin-bottom:12px; }
-    .notice { border:1px solid var(--line); background:var(--thead); color:var(--text); border-radius:14px; padding:12px 14px; line-height:1.55; }
-    .errorbox { display:none; border:1px solid #fecaca; background:#fef2f2; color:#991b1b; border-radius:14px; padding:12px 14px; margin-bottom:16px; white-space:pre-wrap; }
-    :root[data-theme="dark"] .errorbox { background:#450a0a; color:#fecaca; border-color:#7f1d1d; }
-    .authbar { display:flex; align-items:end; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
-    .authbar .field { width:260px; }
-    .small { font-size:12px; }
-    .right { text-align:right; }
-    @media (max-width:960px) { .span-3,.span-4,.span-5,.span-7 { grid-column:span 12; } header { flex-direction:column; } .forms { grid-template-columns:1fr; } }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPA FreeModel Operations</title>
+<style>
+:root{color-scheme:light dark;--bg:#f6f7fb;--panel:#fff;--panel2:#f8fafc;--text:#172033;--muted:#667085;--line:#e4e7ec;--blue:#2563eb;--green:#059669;--amber:#d97706;--red:#dc2626;--shadow:0 8px 24px rgba(23,32,51,.07);--track:#e5e7eb}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--panel:#171a21;--panel2:#111827;--text:#f3f4f6;--muted:#9ca3af;--line:#2d3340;--blue:#60a5fa;--green:#34d399;--amber:#fbbf24;--red:#f87171;--shadow:0 8px 24px rgba(0,0,0,.3);--track:#293241}}
+:root[data-theme=dark]{--bg:#0f1115;--panel:#171a21;--panel2:#111827;--text:#f3f4f6;--muted:#9ca3af;--line:#2d3340;--blue:#60a5fa;--green:#34d399;--amber:#fbbf24;--red:#f87171;--shadow:0 8px 24px rgba(0,0,0,.3);--track:#293241}
+:root[data-theme=white],:root[data-theme=light]{--bg:#f6f7fb;--panel:#fff;--panel2:#f8fafc;--text:#172033;--muted:#667085;--line:#e4e7ec;--blue:#2563eb;--green:#059669;--amber:#d97706;--red:#dc2626;--shadow:0 8px 24px rgba(23,32,51,.07);--track:#e5e7eb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}main{max-width:1320px;margin:0 auto;padding:18px 18px 32px}header{display:flex;justify-content:space-between;gap:14px;margin-bottom:12px}h1{margin:0 0 4px;font-size:24px;letter-spacing:-.03em}h2{margin:0;font-size:16px}p{margin:0;color:var(--muted);line-height:1.5}.sub{font-size:12px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:var(--shadow)}.span-2{grid-column:span 2}.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-8{grid-column:span 8}.span-10{grid-column:span 10}.span-12{grid-column:span 12}.top-actions,.tabs,.authbar,.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.toolbar{justify-content:space-between;margin-bottom:8px}button,input,textarea{font:inherit}button{border:0;border-radius:9px;padding:7px 11px;background:var(--blue);color:#fff;cursor:pointer;font-weight:700;font-size:13px}button.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}button.tab{background:var(--panel2);color:var(--text);border:1px solid var(--line);box-shadow:none}button.tab.active{background:var(--text);color:var(--panel)}input,textarea{width:100%;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--text);padding:7px 9px}label{display:block;color:var(--muted);font-size:11px;font-weight:800;margin:0 0 4px}.metric{min-height:82px}.metric .label{color:var(--muted);font-size:12px;font-weight:700}.metric .value{font-size:24px;font-weight:900;letter-spacing:-.04em;margin-top:4px}.metric .hint{color:var(--muted);font-size:11px;margin-top:4px}.pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:800;background:var(--panel2);color:var(--text);border:1px solid var(--line)}.pill.ok{background:rgba(5,150,105,.14);color:var(--green);border-color:rgba(5,150,105,.28)}.pill.warn{background:rgba(217,119,6,.14);color:var(--amber);border-color:rgba(217,119,6,.28)}.pill.err{background:rgba(220,38,38,.14);color:var(--red);border-color:rgba(220,38,38,.28)}.muted{color:var(--muted)}.small{font-size:11px}.right{text-align:right}.money{font-variant-numeric:tabular-nums;font-weight:900}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}table{width:100%;border-collapse:separate;border-spacing:0}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:12px}th{color:var(--muted);font-size:11px;background:var(--panel2);font-weight:800}tr:last-child td{border-bottom:0}.quota-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:9px}.quota-card{border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:10px}.quota-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px}.quota-email{font-weight:900}.quota-real{font-size:22px;font-weight:950}.bar-row{display:grid;grid-template-columns:46px 1fr 58px;align-items:center;gap:8px;margin-top:7px}.bar-title{font-weight:800;color:var(--muted);font-size:12px}.bar{height:8px;background:var(--track);border-radius:999px;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,var(--green),var(--blue));border-radius:999px}.fill.warn{background:linear-gradient(90deg,var(--amber),var(--red))}.bar-meta{text-align:right;font-size:11px;color:var(--muted)}.kv{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;margin-top:8px;font-size:11px;color:var(--muted)}.errorbox{display:none;border:1px solid rgba(220,38,38,.35);background:rgba(220,38,38,.1);color:var(--red);border-radius:12px;padding:9px 11px;margin-bottom:10px;white-space:pre-wrap}.notice{border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:9px;line-height:1.45}.form-row{margin-bottom:8px}.forms{display:grid;grid-template-columns:1fr 1fr;gap:10px}textarea{min-height:96px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:11px}code{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 5px}.authbar{margin-bottom:10px}.authbar .field{width:190px}@media(max-width:980px){.span-2,.span-3,.span-4,.span-8,.span-10{grid-column:span 12}header{flex-direction:column}.forms{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <main>
-  <header>
-    <div>
-      <div class="pill">CPA Plugin</div>
-      <h1>FreeModel 供应商运营面板</h1>
-      <p>只展示脱敏运营数据。默认 <code>model_executor_enabled=false</code>，RELAYX 第一阶段不依赖模型 executor。</p>
-    </div>
-    <div class="top-actions">
-      <button id="refreshBtn">刷新数据</button>
-      <button id="syncBtn" class="secondary">触发同步</button>
-      <a href="/management.html#/plugins"><button class="secondary">返回插件管理</button></a>
-    </div>
-  </header>
-
-  <div class="card authbar">
-    <div class="field"><label>管理密码</label><input id="managementKey" type="password" placeholder="本地 PoC 默认 cpa" autocomplete="current-password"></div>
-    <button id="saveKeyBtn" class="secondary">保存并刷新</button>
-    <button id="clearKeyBtn" class="secondary">清除</button>
-    <span class="muted small">登录后台不等于插件页自动带管理 key；这里保存到当前浏览器 localStorage。</span>
-  </div>
-
-  <div id="errorBox" class="errorbox"></div>
-
-  <section class="grid" style="margin-bottom:16px">
-    <div class="card metric span-3"><div class="label">插件状态</div><div id="pluginStatus" class="value">--</div><div id="pluginHint" class="hint">等待加载</div></div>
-    <div class="card metric span-3"><div class="label">账号总数</div><div id="accountCount" class="value">--</div><div id="accountHint" class="hint">FreeModel account pool</div></div>
-    <div class="card metric span-3"><div class="label">真实可用</div><div id="realAvailable" class="value">--</div><div id="quotaHint" class="hint">窗口可用 + 额外用量可用</div></div>
-    <div class="card metric span-3"><div class="label">其他 / 过期</div><div id="otherCount" class="value">--</div><div id="otherHint" class="hint">过期、待同步、无真实余额</div></div>
-  </section>
-
-  <section class="grid">
-    <div class="card span-7">
-      <div class="toolbar">
-        <h2>额度监控</h2>
-        <div class="tabs">
-          <button class="tab active" data-view="all">全部</button>
-          <button class="tab" data-view="available">真实可用</button>
-          <button class="tab" data-view="other">其他</button>
-        </div>
-      </div>
-      <div class="table-wrap"><table>
-        <thead><tr><th>账号</th><th>状态</th><th class="right">真实可用</th><th class="right">窗口可用</th><th class="right">额外可用</th><th>5h / 7d</th><th>更新时间</th></tr></thead>
-        <tbody id="quotaRows"><tr><td colspan="7" class="muted">加载中...</td></tr></tbody>
-      </table></div>
-    </div>
-
-    <div class="card span-5">
-      <h2>账号池</h2>
-      <div class="table-wrap"><table>
-        <thead><tr><th>ID</th><th>账号</th><th>API Key</th><th>代理</th></tr></thead>
-        <tbody id="accountRows"><tr><td colspan="4" class="muted">加载中...</td></tr></tbody>
-      </table></div>
-    </div>
-
-    <div class="card span-12">
-      <div class="toolbar"><h2>运营事件</h2><span class="muted small">auth expired / proxy failed / quota / upstream errors</span></div>
-      <div class="table-wrap"><table>
-        <thead><tr><th>类型</th><th>级别</th><th>状态</th><th>账号</th><th>模型/路径</th><th>消息</th><th>时间</th></tr></thead>
-        <tbody id="incidentRows"><tr><td colspan="7" class="muted">加载中...</td></tr></tbody>
-      </table></div>
-    </div>
-
-    <div class="card span-5">
-      <h2>添加 / 更新账号</h2>
-      <div class="notice small">Cookie / API key 只会提交给 CPA 插件本地存储，列表和导出默认不会返回敏感值。</div>
-      <form id="accountForm" style="margin-top:14px">
-        <div class="form-row"><label>Email</label><input name="email" placeholder="name@example.com" autocomplete="off" required></div>
-        <div class="form-row"><label>Dashboard Cookie（可选）</label><input name="cookie" placeholder="bm_session=..." autocomplete="off"></div>
-        <div class="form-row"><label>Model API Key（可选，executor 实验用）</label><input name="api_key" placeholder="fe_oa_..." autocomplete="off"></div>
-        <div class="form-row"><label>Proxy（可选）</label><input name="proxy" placeholder="direct 或 http://user:pass@host:port" autocomplete="off"></div>
-        <button type="submit">保存账号</button>
-      </form>
-    </div>
-
-    <div class="card span-7">
-      <h2>导入 / 导出</h2>
-      <div class="forms">
-        <div>
-          <p class="small">默认导出均为脱敏数据，不包含 cookie、session、token、API key、Authorization header。</p>
-          <p style="margin-top:12px"><a href="/v0/management/freemodel-plugin/export/accounts" target="_blank">导出账号</a></p>
-          <p><a href="/v0/management/freemodel-plugin/export/quota-snapshots" target="_blank">导出额度快照</a></p>
-          <p><a href="/v0/management/freemodel-plugin/export/incidents" target="_blank">导出运营事件</a></p>
-        </div>
-        <div>
-          <form id="importForm">
-            <label>Import accounts JSON（建议 dry_run:true）</label>
-            <textarea name="payload">{"dry_run":true,"validate_only":false,"accounts":[]}</textarea>
-            <button type="submit" class="secondary" style="margin-top:10px">验证导入</button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div class="card span-12">
-      <h2>RELAYX 对接边界</h2>
-      <p>RELAYX 第一阶段可读取 <code>health</code>、<code>accounts</code>、<code>quota</code>；外部运营 agent 可额外读取 <code>incidents</code>、<code>usage-snapshots</code>、<code>reconciliation-source</code>。RELAYX 不应持有 FreeModel cookie/session/API key，也不应直接读 CPA 插件数据库。</p>
-    </div>
-  </section>
+<header><div><div class="pill">CPA Plugin</div><h1>FreeModel 供应商运营面板</h1><p class="sub">脱敏运营视图 · executor 默认关闭 · 跟随管理后台/系统明暗主题</p></div><div class="top-actions"><button id="refreshBtn">刷新额度</button><button id="syncBtn" class="secondary">同步 CK 额度</button><a href="/management.html#/plugins"><button class="secondary">返回插件管理</button></a></div></header>
+<div class="card authbar"><div class="field"><label>管理密码</label><input id="managementKey" type="password" placeholder="本地 PoC 默认 cpa" autocomplete="current-password"></div><button id="saveKeyBtn" class="secondary">保存并刷新</button><button id="clearKeyBtn" class="secondary">清除</button><span class="muted small">仅保存在当前浏览器 localStorage；不会返回 CK/API key/cookie。</span></div>
+<div id="errorBox" class="errorbox"></div>
+<section class="grid" style="margin-bottom:10px"><div class="card metric span-2"><div class="label">插件状态</div><div id="pluginStatus" class="value">--</div><div id="pluginHint" class="hint">等待加载</div></div><div class="card metric span-2"><div class="label">账号总数</div><div id="accountCount" class="value">--</div><div class="hint">账号池</div></div><div class="card metric span-3"><div class="label">真实可用</div><div id="realAvailable" class="value">--</div><div id="quotaHint" class="hint">窗口 + 额外</div></div><div class="card metric span-2"><div class="label">其他 / 过期</div><div id="otherCount" class="value">--</div><div class="hint">不可调度</div></div><div class="card metric span-3"><div class="label">更新时间</div><div id="updatedAt" class="value" style="font-size:18px">--</div><div class="hint">点击刷新后更新</div></div></section>
+<section class="grid"><div class="card span-8"><div class="toolbar"><h2>额度监控</h2><div class="tabs"><button class="tab active" data-view="all">全部(0)</button><button class="tab" data-view="available">真实可用(0)</button><button class="tab" data-view="other">其他(0)</button></div></div><div id="quotaCards" class="quota-cards"><div class="muted small">加载中...</div></div></div><div class="card span-4"><h2 style="margin-bottom:8px">账号池</h2><div class="table-wrap"><table><thead><tr><th>ID</th><th>账号</th><th>Key</th><th>代理</th></tr></thead><tbody id="accountRows"><tr><td colspan="4" class="muted">加载中...</td></tr></tbody></table></div></div><div class="card span-12"><div class="toolbar"><h2>运营事件</h2><span class="muted small">认证、代理、额度、上游错误</span></div><div class="table-wrap"><table><thead><tr><th>类型</th><th>级别</th><th>状态</th><th>账号</th><th>模型/路径</th><th>消息</th><th>时间</th></tr></thead><tbody id="incidentRows"><tr><td colspan="7" class="muted">加载中...</td></tr></tbody></table></div></div><div class="card span-4"><h2 style="margin-bottom:8px">添加 / 更新账号</h2><div class="notice small">Cookie / API key 只提交给本地 CPA 插件；列表和导出默认脱敏。</div><form id="accountForm" style="margin-top:10px"><div class="form-row"><label>Email</label><input name="email" placeholder="name@example.com" autocomplete="off" required></div><div class="form-row"><label>Dashboard Cookie（可选）</label><input name="cookie" placeholder="bm_session=..." autocomplete="off"></div><div class="form-row"><label>Model API Key（可选）</label><input name="api_key" placeholder="fe_oa_..." autocomplete="off"></div><div class="form-row"><label>Proxy（可选）</label><input name="proxy" placeholder="direct 或 http://user:pass@host:port" autocomplete="off"></div><button type="submit">保存账号</button></form></div><div class="card span-8"><h2 style="margin-bottom:8px">导入 / 导出</h2><div class="forms"><div><p class="small">默认导出脱敏数据，不包含 cookie、session、token、API key、Authorization header。</p><p style="margin-top:8px"><a href="/v0/management/freemodel-plugin/export/accounts" target="_blank">导出账号</a></p><p><a href="/v0/management/freemodel-plugin/export/quota-snapshots" target="_blank">导出额度快照</a></p><p><a href="/v0/management/freemodel-plugin/export/incidents" target="_blank">导出运营事件</a></p></div><form id="importForm"><label>Import accounts JSON（建议 dry_run:true）</label><textarea name="payload">{"dry_run":true,"validate_only":false,"accounts":[]}</textarea><button type="submit" class="secondary" style="margin-top:8px">验证导入</button></form></div></div><div class="card span-12"><h2 style="margin-bottom:6px">RELAYX 对接边界</h2><p class="small">RELAYX 第一阶段读取 <code>health</code>、<code>accounts</code>、<code>quota</code>；运营 agent 可额外读取 incidents / snapshots / reconciliation。RELAYX 不持有 FreeModel cookie/session/API key，不直接读插件数据库。</p></div></section>
 </main>
 <script>
-const api = '/v0/management/freemodel-plugin';
-const keyStorageName = 'cpa_freemodel_management_key';
-let currentView = 'all';
-(function initTheme(){
-  const saved = localStorage.getItem('theme') || localStorage.getItem('cpa_theme') || localStorage.getItem('vite-ui-theme');
-  if(saved === 'dark' || saved === 'light') document.documentElement.dataset.theme = saved;
-})();
-function managementHeaders(extra){
-  const key = (localStorage.getItem(keyStorageName) || '').trim();
-  const headers = Object.assign({}, extra || {});
-  if(key) headers['X-Management-Key'] = key;
-  return headers;
-}
-function money(cents){ return '$' + ((Number(cents || 0))/100).toFixed(2); }
-function text(v){ return (v === undefined || v === null || v === '') ? '--' : String(v); }
-function esc(v){ return text(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
-function pill(label, kind){ return '<span class="pill '+kind+'">'+esc(label)+'</span>'; }
-function showError(err){ const el=document.getElementById('errorBox'); el.style.display='block'; const msg = err && err.message ? err.message : String(err); el.textContent = (msg.includes('missing management key') || msg.includes('invalid management key') || msg.includes('HTTP 401')) ? msg + '\n请在上方填写管理密码，本地 PoC 默认：cpa。' : msg; }
-function clearError(){ const el=document.getElementById('errorBox'); el.style.display='none'; el.textContent=''; }
-async function getJSON(path){
-  const res = await fetch(api + path, { credentials:'same-origin', headers: managementHeaders() });
-  const data = await res.json().catch(() => ({}));
-  if(!res.ok || data.success === false || data.error){ throw new Error(data.message || data.error || ('HTTP '+res.status)); }
-  return data;
-}
-async function postJSON(path, body){
-  const res = await fetch(api + path, { method:'POST', credentials:'same-origin', headers: managementHeaders({'Content-Type':'application/json'}), body:JSON.stringify(body) });
-  const data = await res.json().catch(() => ({}));
-  if(!res.ok || data.success === false || data.error){ throw new Error(data.message || data.error || ('HTTP '+res.status)); }
-  return data;
-}
-async function patchJSON(path, body){
-  const res = await fetch(api + path, { method:'PATCH', credentials:'same-origin', headers: managementHeaders({'Content-Type':'application/json'}), body:JSON.stringify(body) });
-  const data = await res.json().catch(() => ({}));
-  if(!res.ok || data.success === false || data.error){ throw new Error(data.message || data.error || ('HTTP '+res.status)); }
-  return data;
-}
-function renderHealth(h){
-  document.getElementById('pluginStatus').innerHTML = h.store_ok ? '<span style="color:var(--green)">OK</span>' : '<span style="color:var(--red)">FAIL</span>';
-  document.getElementById('pluginHint').textContent = h.version + ' · executor ' + (h.model_executor_enabled ? 'experimental enabled' : 'disabled') + ' · schema ' + h.schema_version;
-}
-function renderAccounts(items){
-  document.getElementById('accountCount').textContent = items.length;
-  document.getElementById('accountRows').innerHTML = items.length ? items.map(a => '<tr><td>'+a.id+'</td><td>'+esc(a.email)+'<br><span class="muted small">'+esc((a.email_hash||'').slice(0,12))+'</span></td><td>'+(a.model_api_configured?pill('已配置','ok'):pill('未配置','gray'))+'</td><td>'+esc(a.proxy||'direct')+'</td></tr>').join('') : '<tr><td colspan="4" class="muted">暂无账号</td></tr>';
-}
-function renderQuota(resp){
-  const s = resp.summary || {};
-  document.getElementById('realAvailable').textContent = money(s.real_available_cents);
-  document.getElementById('quotaHint').textContent = '窗口 ' + money(s.window_available_cents) + ' · 额外 ' + money(s.extra_available_cents);
-  document.getElementById('otherCount').textContent = text(s.other) + ' / ' + text(s.subscription_expired);
-  const rows = resp.data || [];
-  document.getElementById('quotaRows').innerHTML = rows.length ? rows.map(q => {
-    const kind = q.availability_status === 'available' && q.real_available_cents > 0 ? 'ok' : (q.subscription_expired ? 'err' : 'warn');
-    const used5 = (q.window_5h && q.window_5h.limit_cents) ? money(q.window_5h.used_cents)+' / '+money(q.window_5h.limit_cents) : '--';
-    const usedW = (q.window_week && q.window_week.limit_cents) ? money(q.window_week.used_cents)+' / '+money(q.window_week.limit_cents) : '--';
-    return '<tr><td>'+esc(q.email)+'<br><span class="muted small">#'+esc(q.account_id)+'</span></td><td>'+pill(q.availability_reason || q.availability_status, kind)+'<br><span class="muted small">'+esc(q.plan_status)+'</span></td><td class="right money">'+money(q.real_available_cents)+'</td><td class="right money">'+money(q.window_available_cents)+'</td><td class="right money">'+money(q.extra_available_cents)+'</td><td><span class="small">5h '+used5+'<br>7d '+usedW+'</span></td><td class="small">'+esc(q.fetched_at)+'</td></tr>';
-  }).join('') : '<tr><td colspan="7" class="muted">暂无额度数据</td></tr>';
-}
-function renderIncidents(items){
-  document.getElementById('incidentRows').innerHTML = items.length ? items.map(i => '<tr><td>'+esc(i.kind)+'</td><td>'+pill(i.severity, i.severity==='critical'?'err':(i.severity==='warning'?'warn':'gray'))+'</td><td>'+esc(i.status)+'</td><td>'+esc(i.account_email||'')+'</td><td>'+esc(i.model||'')+'<br><span class="muted small">'+esc(i.path||'')+'</span></td><td>'+esc(i.message)+'</td><td class="small">'+esc(i.detected_at||i.first_seen_at||'')+'</td></tr>').join('') : '<tr><td colspan="7" class="muted">暂无事件</td></tr>';
-}
-async function load(){
-  clearError();
-  try {
-    const [health, accounts, quota, incidents] = await Promise.all([
-      getJSON('/health'), getJSON('/accounts'), getJSON('/quota?view='+encodeURIComponent(currentView)), getJSON('/incidents')
-    ]);
-    renderHealth(health);
-    renderAccounts(accounts.data || []);
-    renderQuota(quota);
-    renderIncidents(incidents.data || []);
-  } catch(err) { showError(err); }
-}
-const keyInput = document.getElementById('managementKey');
-keyInput.value = localStorage.getItem(keyStorageName) || 'cpa';
-document.getElementById('saveKeyBtn').addEventListener('click', () => { localStorage.setItem(keyStorageName, keyInput.value.trim()); load(); });
-document.getElementById('clearKeyBtn').addEventListener('click', () => { localStorage.removeItem(keyStorageName); keyInput.value = ''; load(); });
-if(!localStorage.getItem(keyStorageName) && keyInput.value) localStorage.setItem(keyStorageName, keyInput.value);
-document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); currentView = btn.dataset.view; load(); }));
-document.getElementById('refreshBtn').addEventListener('click', load);
-document.getElementById('syncBtn').addEventListener('click', async () => { clearError(); try { await postJSON('/sync', {}); await load(); } catch(err) { showError(err); } });
-document.getElementById('accountForm').addEventListener('submit', async ev => {
-  ev.preventDefault(); clearError();
-  const fd = new FormData(ev.currentTarget); const body = Object.fromEntries(fd.entries());
-  try { await postJSON('/accounts', body); ev.currentTarget.reset(); await load(); } catch(err) { showError(err); }
-});
-document.getElementById('importForm').addEventListener('submit', async ev => {
-  ev.preventDefault(); clearError();
-  try { const body = JSON.parse(new FormData(ev.currentTarget).get('payload')); const out = await postJSON('/import/accounts', body); alert(JSON.stringify(out.summary || out, null, 2)); await load(); } catch(err) { showError(err); }
-});
-load();
+const api='/v0/management/freemodel-plugin';const keyStorageName='cpa_freemodel_management_key';let currentView='all';let latestQuota=[];let latestSummary={};
+function readPersisted(name){try{const raw=localStorage.getItem(name);if(!raw)return null;const obj=JSON.parse(raw);return obj&&obj.state?obj.state:obj}catch{return null}}
+function applyTheme(){const st=readPersisted('cli-proxy-theme');let theme=(st&&st.theme)||localStorage.getItem('theme')||'auto';let resolved=theme==='dark'?'dark':theme==='white'?'white':theme==='light'?'light':(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'white');document.documentElement.dataset.theme=resolved}
+applyTheme();setInterval(applyTheme,1000);try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme)}catch{}
+function managementHeaders(extra){const key=(localStorage.getItem(keyStorageName)||'').trim();const h=Object.assign({},extra||{});if(key)h['X-Management-Key']=key;return h}
+function money(c){return '$'+(Number(c||0)/100).toFixed(2)}function pct(used,limit){if(!limit||limit<=0)return 0;return Math.max(0,Math.min(100,Math.round(Number(used||0)*100/Number(limit))))}function remain(used,limit){return Math.max(0,Number(limit||0)-Number(used||0))}function text(v){return(v===undefined||v===null||v==='')?'--':String(v)}function esc(v){return text(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}function pill(label,kind){return '<span class="pill '+kind+'">'+esc(label)+'</span>'}function fmtTime(v){if(!v)return'--';const d=new Date(v);if(Number.isNaN(d.getTime()))return esc(v);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+'-'+p(d.getMinutes())+'-'+p(d.getSeconds())}function zh(v){const m={active:'有效',expired:'已过期',canceled:'已取消',cancelled:'已取消',inactive:'未激活',available:'可用',other:'其他',real_balance_available:'真实可用',subscription_expired:'订阅过期',pending_sync:'待同步',no_real_balance:'无真实可用余额',ready:'已同步',syncing:'同步中',open:'未处理',resolved:'已解决',warning:'警告',critical:'严重',info:'信息'};return m[String(v||'').toLowerCase()]||text(v)}
+function showError(e){const el=document.getElementById('errorBox');el.style.display='block';const msg=e&&e.message?e.message:String(e);el.textContent=(msg.includes('management key')||msg.includes('401'))?msg+'\n请在上方填写管理密码，本地 PoC 默认：cpa。':msg}function clearError(){const el=document.getElementById('errorBox');el.style.display='none';el.textContent=''}async function getJSON(path){const r=await fetch(api+path,{credentials:'same-origin',headers:managementHeaders()});const d=await r.json().catch(()=>({}));if(!r.ok||d.success===false||d.error)throw new Error(d.message||d.error||('HTTP '+r.status));return d}async function postJSON(path,body){const r=await fetch(api+path,{method:'POST',credentials:'same-origin',headers:managementHeaders({'Content-Type':'application/json'}),body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok||d.success===false||d.error)throw new Error(d.message||d.error||('HTTP '+r.status));return d}
+function renderHealth(h){document.getElementById('pluginStatus').innerHTML=h.store_ok?'<span style="color:var(--green)">OK</span>':'<span style="color:var(--red)">FAIL</span>';document.getElementById('pluginHint').textContent='executor '+(h.model_executor_enabled?'实验开启':'关闭')+' · '+h.schema_version}
+function renderAccounts(items){document.getElementById('accountCount').textContent=items.length;document.getElementById('accountRows').innerHTML=items.length?items.map(a=>'<tr><td>'+a.id+'</td><td>'+esc(a.email)+'<br><span class="muted small">'+esc((a.email_hash||'').slice(0,8))+'</span></td><td>'+(a.model_api_configured?pill('有','ok'):pill('无','warn'))+'</td><td>'+esc(a.proxy||'直连')+'</td></tr>').join(''):'<tr><td colspan="4" class="muted">暂无账号</td></tr>'}
+function updateTabs(summary){document.querySelector('[data-view=all]').textContent='全部('+(summary.all||0)+')';document.querySelector('[data-view=available]').textContent='真实可用('+(summary.available||0)+')';document.querySelector('[data-view=other]').textContent='其他('+(summary.other||0)+')'}
+function bar(title,used,limit,available){const percent=pct(used,limit);const free=available===undefined?remain(used,limit):available;const cls=percent>=90?' warn':'';return '<div class="bar-row"><div class="bar-title">'+title+'</div><div><div class="bar"><div class="fill'+cls+'" style="width:'+percent+'%"></div></div><div class="small muted">剩余 '+money(free)+' / 总 '+money(limit)+'</div></div><div class="bar-meta">'+percent+'%</div></div>'}
+function renderQuota(resp){latestSummary=resp.summary||{};latestQuota=resp.data||[];updateTabs(latestSummary);document.getElementById('realAvailable').textContent=money(latestSummary.real_available_cents);document.getElementById('quotaHint').textContent='窗口 '+money(latestSummary.window_available_cents)+' · 额外 '+money(latestSummary.extra_available_cents);document.getElementById('otherCount').textContent=text(latestSummary.other)+' / '+text(latestSummary.subscription_expired);document.getElementById('updatedAt').textContent=fmtTime(new Date().toISOString());const rows=latestQuota;document.getElementById('quotaCards').innerHTML=rows.length?rows.map(q=>{const kind=q.availability_status==='available'&&q.real_available_cents>0?'ok':(q.subscription_expired?'err':'warn');const extra=q.extra_available_cents||0;return '<div class="quota-card"><div class="quota-head"><div><div class="quota-email">'+esc(q.email)+'</div><div class="small muted">#'+esc(q.account_id)+' · '+zh(q.plan_status)+' · '+fmtTime(q.fetched_at)+'</div></div>'+pill(zh(q.availability_reason||q.availability_status),kind)+'</div><div class="quota-real">真实可用 '+money(q.real_available_cents)+'</div>'+bar('5h',q.window_5h&&q.window_5h.used_cents,q.window_5h&&q.window_5h.limit_cents,q.window_5h_remaining)+bar('7d',q.window_week&&q.window_week.used_cents,q.window_week&&q.window_week.limit_cents,q.window_week_remaining)+bar('额外',extra>0?0:1,extra>0?extra:1,extra)+'<div class="kv"><div>窗口可用：<b>'+money(q.window_available_cents)+'</b></div><div>额外可用：<b>'+money(extra)+'</b></div><div>订阅：<b>'+zh(q.subscription_expired?'expired':'active')+'</b></div><div>同步：<b>'+zh(q.sync_status)+'</b></div></div></div>'}).join(''):'<div class="muted small">暂无额度数据</div>'}
+function renderIncidents(items){document.getElementById('incidentRows').innerHTML=items.length?items.map(i=>'<tr><td>'+zh(i.kind)+'</td><td>'+pill(zh(i.severity),i.severity==='critical'?'err':(i.severity==='warning'?'warn':'gray'))+'</td><td>'+zh(i.status)+'</td><td>'+esc(i.account_email||'')+'</td><td>'+esc(i.model||'')+'<br><span class="muted small">'+esc(i.path||'')+'</span></td><td>'+esc(i.message)+'</td><td class="small">'+fmtTime(i.detected_at||i.first_seen_at||'')+'</td></tr>').join(''):'<tr><td colspan="7" class="muted">暂无事件</td></tr>'}
+async function load(){clearError();try{const [h,a,q,i]=await Promise.all([getJSON('/health'),getJSON('/accounts'),getJSON('/quota?view='+encodeURIComponent(currentView)),getJSON('/incidents')]);renderHealth(h);renderAccounts(a.data||[]);renderQuota(q);renderIncidents(i.data||[])}catch(e){showError(e)}}
+const keyInput=document.getElementById('managementKey');keyInput.value=localStorage.getItem(keyStorageName)||'cpa';if(!localStorage.getItem(keyStorageName))localStorage.setItem(keyStorageName,keyInput.value);document.getElementById('saveKeyBtn').onclick=()=>{localStorage.setItem(keyStorageName,keyInput.value.trim());load()};document.getElementById('clearKeyBtn').onclick=()=>{localStorage.removeItem(keyStorageName);keyInput.value='';load()};document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentView=b.dataset.view;load()});document.getElementById('refreshBtn').onclick=load;document.getElementById('syncBtn').onclick=async()=>{clearError();try{await postJSON('/sync',{});await load()}catch(e){showError(e)}};document.getElementById('accountForm').onsubmit=async ev=>{ev.preventDefault();clearError();try{await postJSON('/accounts',Object.fromEntries(new FormData(ev.currentTarget).entries()));ev.currentTarget.reset();await load()}catch(e){showError(e)}};document.getElementById('importForm').onsubmit=async ev=>{ev.preventDefault();clearError();try{const out=await postJSON('/import/accounts',JSON.parse(new FormData(ev.currentTarget).get('payload')));alert(JSON.stringify(out.summary||out,null,2));await load()}catch(e){showError(e)}};load();
 </script>
 </body>
 </html>`
