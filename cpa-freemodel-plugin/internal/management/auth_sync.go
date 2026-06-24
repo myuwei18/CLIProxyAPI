@@ -42,7 +42,7 @@ func handleSendOTP(req managementRequest) ([]byte, error) {
 		return jsonResponse(http.StatusBadRequest, failure(errClient.Error()))
 	}
 	if errSend := client.SendOTP(input.Email); errSend != nil {
-		return jsonResponse(http.StatusBadGateway, failure(errSend.Error()))
+		return jsonResponse(http.StatusBadGateway, failure("send verification code failed: "+safeUpstreamError(errSend)))
 	}
 	return jsonResponse(http.StatusOK, map[string]any{"success": true, "message": "verification code sent"})
 }
@@ -69,7 +69,7 @@ func handleVerifyOTP(req managementRequest) ([]byte, error) {
 	}
 	cookie, errVerify := client.VerifyOTP(input.Email, input.Code)
 	if errVerify != nil {
-		return jsonResponse(http.StatusUnauthorized, failure("verification failed: "+errVerify.Error()))
+		return jsonResponse(http.StatusUnauthorized, failure("verification failed: "+safeUpstreamError(errVerify)))
 	}
 	account, errSave := db.SaveAccount(context.Background(), store.AccountInput{Email: input.Email, Cookie: cookie, Proxy: input.Proxy})
 	if errSave != nil {
@@ -134,4 +134,22 @@ func syncResultPublic(result *freemodelsvc.SyncResult) *publicSyncResult {
 		})
 	}
 	return out
+}
+
+func safeUpstreamError(err error) string {
+	if err == nil {
+		return "unknown upstream error"
+	}
+	msg := strings.TrimSpace(err.Error())
+	lower := strings.ToLower(msg)
+	if strings.Contains(lower, "cookie") || strings.Contains(lower, "session") || strings.Contains(lower, "token") || strings.Contains(lower, "authorization") || strings.Contains(lower, "password") || strings.Contains(lower, "fe_oa_") {
+		return "upstream request failed"
+	}
+	if len(msg) > 160 {
+		msg = msg[:160]
+	}
+	if msg == "" {
+		return "upstream request failed"
+	}
+	return msg
 }

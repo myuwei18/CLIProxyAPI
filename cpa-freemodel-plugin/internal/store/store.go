@@ -211,6 +211,8 @@ func (s *Store) PickExecutableAccount(ctx context.Context) (*Account, *QuotaSnap
 			}
 			return nil, nil, errSnap
 		}
+		markSnapshotAccountState(snap, account)
+		setRemaining(snap)
 		if snap.AvailabilityStatus == "available" && snap.RealAvailableCents > 0 && strings.TrimSpace(account.ModelAPIKey) != "" {
 			return &account, snap, nil
 		}
@@ -256,6 +258,29 @@ func (s *Store) UpdateAccountProxy(ctx context.Context, email, proxy string) (*A
 	return s.GetAccount(ctx, email)
 }
 
+func markSnapshotAccountState(snap *QuotaSnapshot, account Account) {
+	snap.HasDashboardCookie = strings.TrimSpace(account.Cookie) != ""
+	snap.IsTestAccount = isTestAccountEmail(account.Email) || isTestAccountEmail(snap.Email)
+	if snap.IsTestAccount {
+		snap.AccountKind = "test"
+		return
+	}
+	snap.AccountKind = "real"
+}
+
+func isTestAccountEmail(email string) bool {
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" {
+		return true
+	}
+	for _, marker := range []string{"example.test", "example.com", "demo", "test", "mock", "sample"} {
+		if strings.Contains(email, marker) {
+			return true
+		}
+	}
+	return false
+}
+
 // SaveSnapshot stores a quota snapshot for an existing account.
 func (s *Store) SaveSnapshot(ctx context.Context, snap QuotaSnapshot) (*QuotaSnapshot, error) {
 	account, err := s.GetAccount(ctx, snap.Email)
@@ -294,6 +319,7 @@ func (s *Store) SaveSnapshot(ctx context.Context, snap QuotaSnapshot) (*QuotaSna
 	snap.AccountID = account.ID
 	snap.Proxy = account.Proxy
 	snap.SyncStatus = "ready"
+	markSnapshotAccountState(&snap, *account)
 	setRemaining(&snap)
 	return &snap, nil
 }
@@ -310,6 +336,7 @@ func (s *Store) ListLatestSnapshots(ctx context.Context) ([]QuotaSnapshot, error
 		if errSnap != nil {
 			if errors.Is(errSnap, sql.ErrNoRows) {
 				pending := QuotaSnapshot{AccountID: account.ID, Email: account.Email, PlanID: "pending", PlanStatus: "syncing", Proxy: account.Proxy, SyncStatus: "pending"}
+				markSnapshotAccountState(&pending, account)
 				setAvailability(&pending)
 				snapshots = append(snapshots, pending)
 				continue
@@ -319,6 +346,7 @@ func (s *Store) ListLatestSnapshots(ctx context.Context) ([]QuotaSnapshot, error
 		snap.Proxy = account.Proxy
 		snap.AccountID = account.ID
 		snap.SyncStatus = "ready"
+		markSnapshotAccountState(snap, account)
 		setRemaining(snap)
 		snapshots = append(snapshots, *snap)
 	}
@@ -382,6 +410,18 @@ func setAvailability(snap *QuotaSnapshot) {
 		snap.ExtraAvailableCents = 0
 	}
 	snap.SubscriptionExpired = subscriptionExpired(*snap, time.Now())
+	if snap.IsTestAccount {
+		snap.RealAvailableCents = 0
+		snap.AvailabilityStatus = "other"
+		snap.AvailabilityReason = "test_account"
+		return
+	}
+	if !snap.HasDashboardCookie {
+		snap.RealAvailableCents = 0
+		snap.AvailabilityStatus = "other"
+		snap.AvailabilityReason = "missing_cookie"
+		return
+	}
 	if snap.SubscriptionExpired {
 		snap.RealAvailableCents = 0
 		snap.AvailabilityStatus = "other"
@@ -422,8 +462,14 @@ func subscriptionExpired(snap QuotaSnapshot, now time.Time) bool {
 	if periodEnd == "" {
 		return false
 	}
-	for _, layout := range []string{time.RFC3339, "2006-01-02 15:04:05", "2006-01-02T15:04:05Z07:00", "2006-01-02"} {
+	for _, layout := range []string{time.RFC3339, "2006-01-02T15:04:05Z07:00"} {
 		parsed, err := time.Parse(layout, periodEnd)
+		if err == nil {
+			return parsed.Before(now)
+		}
+	}
+	for _, layout := range []string{"2006-01-02 15:04:05", "2006-01-02"} {
+		parsed, err := time.ParseInLocation(layout, periodEnd, time.Local)
 		if err == nil {
 			return parsed.Before(now)
 		}

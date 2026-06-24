@@ -111,8 +111,7 @@ func (c *Client) SendOTP(email string) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("send otp HTTP %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("send otp HTTP %d", resp.StatusCode)
 	}
 	return nil
 }
@@ -135,8 +134,7 @@ func (c *Client) VerifyOTP(email, code string) (string, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("verify otp HTTP %d: %s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("verify otp HTTP %d", resp.StatusCode)
 	}
 	for _, cookie := range resp.Cookies() {
 		if cookie.Name == "bm_session" && cookie.Value != "" {

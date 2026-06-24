@@ -48,6 +48,9 @@ type publicQuotaSnapshot struct {
 	AvailabilityStatus   string            `json:"availability_status"`
 	AvailabilityReason   string            `json:"availability_reason"`
 	SyncStatus           string            `json:"sync_status"`
+	HasDashboardCookie   bool              `json:"has_dashboard_cookie"`
+	IsTestAccount        bool              `json:"is_test_account"`
+	AccountKind          string            `json:"account_kind"`
 	Proxy                string            `json:"proxy"`
 }
 
@@ -73,6 +76,9 @@ type publicUsageSnapshot struct {
 	SubscriptionExpired bool    `json:"subscription_expired"`
 	AvailabilityStatus  string  `json:"availability_status"`
 	AvailabilityReason  string  `json:"availability_reason"`
+	HasDashboardCookie  bool    `json:"has_dashboard_cookie"`
+	IsTestAccount       bool    `json:"is_test_account"`
+	AccountKind         string  `json:"account_kind"`
 }
 
 func accountPublic(account store.Account) publicAccount {
@@ -123,6 +129,9 @@ func quotaPublic(snap store.QuotaSnapshot) publicQuotaSnapshot {
 		AvailabilityStatus:   snap.AvailabilityStatus,
 		AvailabilityReason:   snap.AvailabilityReason,
 		SyncStatus:           snap.SyncStatus,
+		HasDashboardCookie:   snap.HasDashboardCookie,
+		IsTestAccount:        snap.IsTestAccount,
+		AccountKind:          snap.AccountKind,
 		Proxy:                maskProxy(snap.Proxy),
 	}
 }
@@ -158,6 +167,9 @@ func usageSnapshotPublic(snap store.QuotaSnapshot) publicUsageSnapshot {
 		SubscriptionExpired: snap.SubscriptionExpired,
 		AvailabilityStatus:  snap.AvailabilityStatus,
 		AvailabilityReason:  snap.AvailabilityReason,
+		HasDashboardCookie:  snap.HasDashboardCookie,
+		IsTestAccount:       snap.IsTestAccount,
+		AccountKind:         snap.AccountKind,
 	}
 }
 

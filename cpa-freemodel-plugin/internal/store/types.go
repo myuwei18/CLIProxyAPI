@@ -58,4 +58,7 @@ type QuotaSnapshot struct {
 	AvailabilityReason   string      `json:"availability_reason"`
 	SyncStatus           string      `json:"sync_status"`
 	Proxy                string      `json:"proxy"`
+	HasDashboardCookie   bool        `json:"has_dashboard_cookie"`
+	IsTestAccount        bool        `json:"is_test_account"`
+	AccountKind          string      `json:"account_kind"`
 }
