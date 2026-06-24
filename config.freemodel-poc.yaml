@@ -1,0 +1,21 @@
+host: "127.0.0.1"
+port: 8317
+remote-management:
+  allow-remote: false
+  secret-key: "$2a$10$cBn6rLk3mrHEN1cGvklqv.udos3akyg1Vk2zDx0ST9PpExj6FjTeq"
+  disable-control-panel: false
+  disable-auto-update-panel: true
+auth-dir: "auths"
+api-keys:
+  - "poc-api-key"
+debug: true
+plugins:
+  enabled: true
+  dir: "plugins"
+  configs:
+    cpa-freemodel:
+      enabled: true
+      priority: 10
+      data_dir: "plugins/cpa-freemodel-data"
+      model_api_base_url: "https://api.freemodel.dev"
+      model_executor_enabled: false
