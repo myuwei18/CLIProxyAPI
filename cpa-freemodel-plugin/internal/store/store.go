@@ -352,8 +352,12 @@ type accountScanner interface {
 
 func scanAccount(scanner accountScanner) (*Account, error) {
 	var account Account
-	if err := scanner.Scan(&account.ID, &account.Email, &account.UserID, &account.Cookie, &account.ModelAPIKey, &account.Proxy, &account.CreatedAt, &account.UpdatedAt); err != nil {
+	var userID sql.NullInt64
+	if err := scanner.Scan(&account.ID, &account.Email, &userID, &account.Cookie, &account.ModelAPIKey, &account.Proxy, &account.CreatedAt, &account.UpdatedAt); err != nil {
 		return nil, err
+	}
+	if userID.Valid {
+		account.UserID = userID.Int64
 	}
 	account.ModelAPIConfigured = strings.TrimSpace(account.ModelAPIKey) != ""
 	return &account, nil
