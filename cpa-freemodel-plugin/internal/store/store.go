@@ -405,10 +405,7 @@ func setRemaining(snap *QuotaSnapshot) {
 
 func setAvailability(snap *QuotaSnapshot) {
 	snap.WindowAvailableCents = trueWindowAvailableCents(snap.Window5hRemaining, snap.WindowWeekRemaining)
-	snap.ExtraAvailableCents = snap.CreditCents + int64(math.Round(snap.ReferralCredits*100))
-	if snap.ExtraAvailableCents < 0 {
-		snap.ExtraAvailableCents = 0
-	}
+	snap.ExtraAvailableCents = extraAvailableCents(*snap)
 	snap.SubscriptionExpired = subscriptionExpired(*snap, time.Now())
 	if snap.IsTestAccount {
 		snap.RealAvailableCents = 0
@@ -441,6 +438,18 @@ func setAvailability(snap *QuotaSnapshot) {
 	}
 	snap.AvailabilityStatus = "other"
 	snap.AvailabilityReason = "no_real_balance"
+}
+
+func extraAvailableCents(snap QuotaSnapshot) int64 {
+	referralAvailable := snap.ReferralCredits - snap.ReferralUsed
+	if referralAvailable < 0 {
+		referralAvailable = 0
+	}
+	extra := snap.TopupCents + snap.CreditCents + int64(math.Round(referralAvailable*100))
+	if extra < 0 {
+		return 0
+	}
+	return extra
 }
 
 func trueWindowAvailableCents(window5hRemaining, windowWeekRemaining int64) int64 {

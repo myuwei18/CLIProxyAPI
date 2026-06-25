@@ -84,7 +84,7 @@ curl -H 'Authorization: Bearer <management-key>' \
 Quota responses include both raw fields and derived classification fields:
 
 - `window_available_cents`: real window capacity, calculated as `min(window_5h_remaining, window_week_remaining)`.
-- `extra_available_cents`: extra usable balance, currently `credit_cents + referral_credits * 100`.
+- `extra_available_cents`: extra usable balance, currently `topup_cents + credit_cents + max(referral_credits - referral_used, 0) * 100`.
 - `real_available_cents`: `window_available_cents + extra_available_cents`, unless the subscription is expired.
 - `subscription_expired`: true when plan status is expired/canceled/inactive or `current_period_end` is in the past.
 - `availability_status`: `available` or `other`.
@@ -264,7 +264,7 @@ Quota record fields:
 - `cancel_at_period_end` boolean.
 - `window_5h`, `window_week`: objects with `used_cents`, `limit_cents`, `resets_at` Unix seconds.
 - `window_5h_remaining`, `window_week_remaining`, `window_available_cents`: derived cents.
-- `extra_available_cents`: `credit_cents + referral_credits * 100`, floored at zero.
+- `extra_available_cents`: `topup_cents + credit_cents + max(referral_credits - referral_used, 0) * 100`, floored at zero.
 - `real_available_cents`: real available balance; forced to 0 when the account is test/sample, has no dashboard CK, subscription expired, pending sync, or has no real balance.
 - `subscription_expired` boolean.
 - `availability_status` string: `available` or `other`.

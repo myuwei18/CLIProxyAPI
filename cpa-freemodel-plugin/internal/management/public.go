@@ -190,14 +190,18 @@ func maskEmail(email string) string {
 	if len(parts) != 2 {
 		return "***"
 	}
-	local := parts[0]
-	if local == "" {
-		return "***@" + parts[1]
+	local := []rune(parts[0])
+	domain := parts[1]
+	switch len(local) {
+	case 0:
+		return "***@" + domain
+	case 1:
+		return string(local[0]) + "***@" + domain
+	case 2, 3, 4:
+		return string(local[:1]) + "***" + string(local[len(local)-1:]) + "@" + domain
+	default:
+		return string(local[:2]) + "***" + string(local[len(local)-2:]) + "@" + domain
 	}
-	if len(local) == 1 {
-		return local + "***@" + parts[1]
-	}
-	return local[:1] + "***@" + parts[1]
 }
 
 func maskProxy(proxyURL string) string {
