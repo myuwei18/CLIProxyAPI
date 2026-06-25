@@ -42,7 +42,7 @@ func handleSendOTP(req managementRequest) ([]byte, error) {
 		return jsonResponse(http.StatusBadRequest, failure(errClient.Error()))
 	}
 	if errSend := client.SendOTP(input.Email); errSend != nil {
-		return jsonResponse(http.StatusBadGateway, failure("send verification code failed: "+safeUpstreamError(errSend)))
+		return jsonResponse(http.StatusBadGateway, failure("验证码发送失败："+safeUpstreamError(errSend)))
 	}
 	return jsonResponse(http.StatusOK, map[string]any{"success": true, "message": "verification code sent"})
 }
@@ -69,7 +69,7 @@ func handleVerifyOTP(req managementRequest) ([]byte, error) {
 	}
 	cookie, errVerify := client.VerifyOTP(input.Email, input.Code)
 	if errVerify != nil {
-		return jsonResponse(http.StatusUnauthorized, failure("verification failed: "+safeUpstreamError(errVerify)))
+		return jsonResponse(http.StatusUnauthorized, failure("验证码验证失败："+safeUpstreamError(errVerify)))
 	}
 	account, errSave := db.SaveAccount(context.Background(), store.AccountInput{Email: input.Email, Cookie: cookie, Proxy: input.Proxy})
 	if errSave != nil {
@@ -138,18 +138,30 @@ func syncResultPublic(result *freemodelsvc.SyncResult) *publicSyncResult {
 
 func safeUpstreamError(err error) string {
 	if err == nil {
-		return "unknown upstream error"
+		return "上游请求失败"
 	}
 	msg := strings.TrimSpace(err.Error())
 	lower := strings.ToLower(msg)
-	if strings.Contains(lower, "cookie") || strings.Contains(lower, "session") || strings.Contains(lower, "token") || strings.Contains(lower, "authorization") || strings.Contains(lower, "password") || strings.Contains(lower, "fe_oa_") {
-		return "upstream request failed"
+	if strings.Contains(lower, "eof") || strings.Contains(lower, "connection reset") || strings.Contains(lower, "connection refused") || strings.Contains(lower, "timeout") || strings.Contains(lower, "no such host") || strings.Contains(lower, "tls") || strings.Contains(lower, "proxy") {
+		return "网络连接失败，可能需要配置代理或稍后重试"
 	}
-	if len(msg) > 160 {
-		msg = msg[:160]
+	if strings.Contains(lower, "cookie") || strings.Contains(lower, "session") || strings.Contains(lower, "token") || strings.Contains(lower, "authorization") || strings.Contains(lower, "password") || strings.Contains(lower, "fe_oa_") || strings.Contains(lower, "http://") || strings.Contains(lower, "https://") {
+		return "上游请求失败"
+	}
+	if strings.Contains(lower, "http 401") || strings.Contains(lower, "unauthorized") {
+		return "认证失败，请重新登录"
+	}
+	if strings.Contains(lower, "http 429") || strings.Contains(lower, "rate") {
+		return "请求过于频繁，请稍后重试"
+	}
+	if strings.Contains(lower, "http 5") {
+		return "上游服务暂时不可用，请稍后重试"
+	}
+	if len(msg) > 80 {
+		msg = msg[:80]
 	}
 	if msg == "" {
-		return "upstream request failed"
+		return "上游请求失败"
 	}
 	return msg
 }
