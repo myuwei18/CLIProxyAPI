@@ -82,9 +82,17 @@ type publicUsageSnapshot struct {
 }
 
 func accountPublic(account store.Account) publicAccount {
+	return accountPublicWithRedaction(account, true)
+}
+
+func accountPublicWithRedaction(account store.Account, redacted bool) publicAccount {
+	email := account.Email
+	if redacted {
+		email = maskEmail(account.Email)
+	}
 	return publicAccount{
 		ID:                 account.ID,
-		Email:              maskEmail(account.Email),
+		Email:              email,
 		EmailHash:          hashStable(account.Email),
 		UserID:             account.UserID,
 		ModelAPIConfigured: account.ModelAPIConfigured,
@@ -103,9 +111,17 @@ func accountsPublic(accounts []store.Account) []publicAccount {
 }
 
 func quotaPublic(snap store.QuotaSnapshot) publicQuotaSnapshot {
+	return quotaPublicWithRedaction(snap, true)
+}
+
+func quotaPublicWithRedaction(snap store.QuotaSnapshot, redacted bool) publicQuotaSnapshot {
+	email := snap.Email
+	if redacted {
+		email = maskEmail(snap.Email)
+	}
 	return publicQuotaSnapshot{
 		AccountID:               snap.AccountID,
-		Email:                   maskEmail(snap.Email),
+		Email:                   email,
 		EmailHash:               hashStable(snap.Email),
 		PlanID:                  snap.PlanID,
 		PlanStatus:              snap.PlanStatus,
@@ -137,9 +153,13 @@ func quotaPublic(snap store.QuotaSnapshot) publicQuotaSnapshot {
 }
 
 func quotasPublic(snaps []store.QuotaSnapshot) []publicQuotaSnapshot {
+	return quotasPublicWithRedaction(snaps, true)
+}
+
+func quotasPublicWithRedaction(snaps []store.QuotaSnapshot, redacted bool) []publicQuotaSnapshot {
 	out := make([]publicQuotaSnapshot, 0, len(snaps))
 	for _, snap := range snaps {
-		out = append(out, quotaPublic(snap))
+		out = append(out, quotaPublicWithRedaction(snap, redacted))
 	}
 	return out
 }
