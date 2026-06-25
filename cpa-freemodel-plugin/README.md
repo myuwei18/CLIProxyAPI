@@ -234,15 +234,23 @@ Account fields:
 - `proxy` string: masked proxy URL, empty/direct when not configured.
 - `created_at`, `updated_at` strings: UTC timestamps.
 
-### GET /quota?view=all|available|other
+### GET /quota?view=all|real|test|available|other
 
 Purpose: latest per-account quota state and derived availability.
+
+Views:
+
+- `all`: every account with latest or pending quota state.
+- `real`: non-test accounts. This is the UI default.
+- `test`: demo/test/mock/sample/example accounts.
+- `available`: only truly usable accounts: real account + dashboard CK configured + non-expired subscription + `real_available_cents > 0`.
+- `other`: accounts that must not be treated as currently usable.
 
 Response fields:
 
 - `success` boolean.
 - `view` string: normalized view.
-- `summary` object: `all`, `available`, `other`, `subscription_expired`, `real_available_cents`, `window_available_cents`, `extra_available_cents`.
+- `summary` object: `all`, `available`, `other`, `subscription_expired`, `real_accounts`, `test_accounts`, `missing_cookie`, `real_available_cents`, `window_available_cents`, `extra_available_cents`.
 - `data` array of quota records.
 
 Quota record fields:
@@ -257,12 +265,29 @@ Quota record fields:
 - `window_5h`, `window_week`: objects with `used_cents`, `limit_cents`, `resets_at` Unix seconds.
 - `window_5h_remaining`, `window_week_remaining`, `window_available_cents`: derived cents.
 - `extra_available_cents`: `credit_cents + referral_credits * 100`, floored at zero.
-- `real_available_cents`: real available balance; forced to 0 when subscription expired.
+- `real_available_cents`: real available balance; forced to 0 when the account is test/sample, has no dashboard CK, subscription expired, pending sync, or has no real balance.
 - `subscription_expired` boolean.
 - `availability_status` string: `available` or `other`.
-- `availability_reason` string: `real_balance_available`, `subscription_expired`, `pending_sync`, or `no_real_balance`.
+- `availability_reason` string: `real_balance_available`, `subscription_expired`, `pending_sync`, `no_real_balance`, `test_account`, or `missing_cookie`.
 - `sync_status` string: `ready` or `pending`.
+- `dashboard_auth_configured` boolean: whether a dashboard CK is configured; the CK is never returned.
+- `is_test_account` boolean: true for demo/test/mock/sample/example-style local accounts.
+- `account_kind` string: `real` or `test`.
 - `proxy` string: masked proxy URL.
+
+Availability classification is intentionally strict. Test/sample accounts, missing CK, expired subscriptions, pending sync, and accounts with no real balance are excluded from `view=available` even when older raw window fields appear positive.
+
+### GET /sync-status
+
+Purpose: latest dashboard/quota sync result.
+
+Response: `{"success": true, "data": sync_result|null}`. `data` is `null` when the sync worker has not run yet in the current process.
+
+Sync result fields:
+
+- `started_at`, `finished_at` strings: formatted timestamps, empty when unknown.
+- `total`, `succeeded`, `failed` integers.
+- `items` array: per-account masked sync result. Each item includes `email`, `email_hash`, `status`, and optional sanitized `message`.
 
 ### GET /incidents
 
@@ -321,8 +346,8 @@ Record fields:
 ## Import and Export APIs
 
 - `GET /export/accounts`: redacted account export. Never includes cookie or API key.
-- `GET /export/quota-snapshots?limit=100`: redacted quota snapshot export.
-- `GET /export/incidents?limit=100&include_resolved=false`: redacted incident export.
+- `GET /export/quota-snapshots?limit=100`: redacted quota snapshot export. Output includes `redacted:true`.
+- `GET /export/incidents?limit=100&include_resolved=false`: redacted incident export. Output includes `redacted:true`.
 - `POST /import/accounts`: accepts `{dry_run, validate_only, accounts:[{email,cookie,api_key,proxy}]}`. Output reports created/updated/skipped/errors. Use `dry_run:true` before writes.
 - `POST /import/snapshots`: accepts `{dry_run, validate_only, snapshots:[...]}` for local testing only.
 
