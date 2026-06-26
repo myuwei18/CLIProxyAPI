@@ -399,14 +399,26 @@ func safeProxyErrorString(value string) string {
 	if value == "" {
 		return ""
 	}
-	value = maskProxy(value)
-	for _, marker := range []string{"password", "token", "authorization", "cookie", "session", "fe_oa_"} {
-		if strings.Contains(strings.ToLower(value), marker) {
-			return "proxy request failed"
+	lower := strings.ToLower(value)
+	for _, marker := range []string{"password", "token", "authorization", "cookie", "session", "fe_oa_", "api key", "apikey"} {
+		if strings.Contains(lower, marker) {
+			return "代理不可用"
 		}
 	}
-	if len(value) > 160 {
-		value = value[:160]
+	if strings.Contains(lower, "timeout") || strings.Contains(lower, "deadline") || strings.Contains(lower, "timed out") {
+		return "请求超时"
 	}
-	return value
+	if strings.Contains(lower, "no such host") || strings.Contains(lower, "lookup") || strings.Contains(lower, "dns") {
+		return "目标不可达"
+	}
+	if strings.Contains(lower, "connection refused") || strings.Contains(lower, "connection reset") || strings.Contains(lower, "proxyconnect") || strings.Contains(lower, "connect:") || strings.Contains(lower, "eof") || strings.Contains(lower, "tls") {
+		return "连接失败"
+	}
+	if strings.Contains(lower, "invalid") || strings.Contains(lower, "unsupported") || strings.Contains(lower, "socks") {
+		return "代理不可用"
+	}
+	if strings.Contains(lower, "http ") {
+		return "目标返回异常"
+	}
+	return "代理不可用"
 }

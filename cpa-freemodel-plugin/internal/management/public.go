@@ -231,10 +231,7 @@ func maskProxy(proxyURL string) string {
 	}
 	parsed, err := url.Parse(proxyURL)
 	if err != nil {
-		return "redacted-proxy"
-	}
-	if parsed.User != nil {
-		parsed.User = url.UserPassword(parsed.User.Username(), "***")
+		return "代理地址已脱敏"
 	}
 	if parsed.RawQuery != "" {
 		query := parsed.Query()
@@ -246,7 +243,24 @@ func maskProxy(proxyURL string) string {
 		}
 		parsed.RawQuery = query.Encode()
 	}
+	if parsed.User != nil {
+		return parsed.Scheme + "://redacted@" + parsed.Host + parsed.EscapedPath() + querySuffix(parsed.RawQuery) + fragmentSuffix(parsed.EscapedFragment())
+	}
 	return parsed.String()
+}
+
+func querySuffix(rawQuery string) string {
+	if rawQuery == "" {
+		return ""
+	}
+	return "?" + rawQuery
+}
+
+func fragmentSuffix(fragment string) string {
+	if fragment == "" {
+		return ""
+	}
+	return "#" + fragment
 }
 
 func hashStable(value string) string {
