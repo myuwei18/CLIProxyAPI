@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -17,6 +19,22 @@ import (
 )
 
 const proxyCheckURL = "https://freemodel.dev/api/auth/me"
+
+type proxySubscriptionImportRequest struct {
+	URL        string `json:"url"`
+	NamePrefix string `json:"name_prefix"`
+	DryRun     bool   `json:"dry_run"`
+}
+
+type proxySubscriptionImportResult struct {
+	Total           int               `json:"total"`
+	Imported        int               `json:"imported"`
+	Skipped         int               `json:"skipped"`
+	DryRun          bool              `json:"dry_run"`
+	Schemes         map[string]int    `json:"schemes"`
+	Errors          []string          `json:"errors,omitempty"`
+	ImportedPreview []publicProxyNode `json:"imported_preview,omitempty"`
+}
 
 type publicProxyNode struct {
 	ID            int64  `json:"id"`
@@ -89,6 +107,136 @@ func handleProxies(req managementRequest) ([]byte, error) {
 	default:
 		return methodNotAllowed()
 	}
+}
+
+func handleProxySubscriptionImport(req managementRequest) ([]byte, error) {
+	if strings.ToUpper(req.Method) != http.MethodPost {
+		return methodNotAllowed()
+	}
+	db, err := runtimeState.getStore()
+	if err != nil {
+		return jsonResponse(http.StatusServiceUnavailable, failure(err.Error()))
+	}
+	var input proxySubscriptionImportRequest
+	if errDecode := json.Unmarshal(req.Body, &input); errDecode != nil {
+		return jsonResponse(http.StatusBadRequest, failure("invalid request: "+errDecode.Error()))
+	}
+	items, errImport := importProxySubscription(context.Background(), db, input)
+	if errImport != nil {
+		return jsonResponse(http.StatusBadRequest, failure(safeProxyError(errImport)))
+	}
+	return jsonResponse(http.StatusOK, success(items))
+}
+
+func importProxySubscription(ctx context.Context, db *store.Store, input proxySubscriptionImportRequest) (proxySubscriptionImportResult, error) {
+	result := proxySubscriptionImportResult{DryRun: input.DryRun, Schemes: map[string]int{}}
+	subURL := strings.TrimSpace(input.URL)
+	if subURL == "" {
+		return result, errors.New("subscription url is required")
+	}
+	parsedSub, errParse := url.Parse(subURL)
+	if errParse != nil || parsedSub.Scheme == "" || parsedSub.Host == "" {
+		return result, errors.New("invalid subscription url")
+	}
+	body, errFetch := fetchProxySubscription(subURL)
+	if errFetch != nil {
+		return result, fmt.Errorf("subscription fetch failed: %s", safeProxyError(errFetch))
+	}
+	lines := parseProxySubscriptionLines(string(body))
+	result.Total = len(lines)
+	prefix := strings.TrimSpace(input.NamePrefix)
+	if prefix == "" {
+		prefix = "sub"
+	}
+	for idx, line := range lines {
+		kind := store.ProxyKind(line)
+		if kind == "unknown" || kind == "direct" {
+			result.Skipped++
+			if parsed, err := url.Parse(line); err == nil && parsed.Scheme != "" {
+				result.Schemes[strings.ToLower(parsed.Scheme)]++
+			}
+			continue
+		}
+		result.Schemes[kind]++
+		if input.DryRun {
+			result.Imported++
+			if len(result.ImportedPreview) < 5 {
+				result.ImportedPreview = append(result.ImportedPreview, publicProxyNode{ID: 0, Name: fmt.Sprintf("%s-%03d", prefix, idx+1), URL: maskProxy(line), Kind: kind, Status: "unchecked", Enabled: true})
+			}
+			continue
+		}
+		item, errSave := db.SaveProxy(ctx, store.ProxyInput{Name: fmt.Sprintf("%s-%03d", prefix, idx+1), URL: line})
+		if errSave != nil {
+			result.Skipped++
+			if len(result.Errors) < 5 {
+				result.Errors = append(result.Errors, safeProxyError(errSave))
+			}
+			continue
+		}
+		result.Imported++
+		if len(result.ImportedPreview) < 5 {
+			result.ImportedPreview = append(result.ImportedPreview, proxyPublic(*item))
+		}
+	}
+	return result, nil
+}
+
+func fetchProxySubscription(subURL string) ([]byte, error) {
+	client := &http.Client{Timeout: 15 * time.Second}
+	req, errReq := http.NewRequest(http.MethodGet, subURL, nil)
+	if errReq != nil {
+		return nil, errReq
+	}
+	req.Header.Set("User-Agent", "Clash.Meta/1.18 cpa-freemodel-plugin")
+	req.Header.Set("Accept", "text/plain, */*")
+	resp, errDo := client.Do(req)
+	if errDo != nil {
+		return nil, errDo
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+	body, errRead := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+	if errRead != nil {
+		return nil, errRead
+	}
+	return body, nil
+}
+
+func parseProxySubscriptionLines(raw string) []string {
+	content := strings.TrimSpace(raw)
+	if content == "" {
+		return nil
+	}
+	if decoded, err := base64.StdEncoding.DecodeString(content); err == nil && looksLikeProxyList(string(decoded)) {
+		content = string(decoded)
+	} else if decoded, err := base64.RawStdEncoding.DecodeString(content); err == nil && looksLikeProxyList(string(decoded)) {
+		content = string(decoded)
+	}
+	seen := map[string]bool{}
+	lines := make([]string, 0)
+	for _, line := range strings.FieldsFunc(content, func(r rune) bool { return r == '\n' || r == '\r' || r == '\t' }) {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if !seen[line] {
+			seen[line] = true
+			lines = append(lines, line)
+		}
+	}
+	return lines
+}
+
+func looksLikeProxyList(value string) bool {
+	lower := strings.ToLower(value)
+	for _, marker := range []string{"http://", "https://", "socks5://", "socks5h://", "vmess://", "vless://", "trojan://", "ss://"} {
+		if strings.Contains(lower, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func handleProxyCheck(req managementRequest) ([]byte, error) {
@@ -176,6 +324,11 @@ func checkProxyNode(item store.ProxyNode) store.ProxyCheckResult {
 	if kind == "unknown" {
 		result.Status = "invalid"
 		result.LastError = "invalid proxy url"
+		return result
+	}
+	if kind == "socks5" || kind == "socks5h" {
+		result.Status = "invalid"
+		result.LastError = "socks proxy check not supported in this build"
 		return result
 	}
 	client, errClient := proxyHTTPClient(item.URL)
