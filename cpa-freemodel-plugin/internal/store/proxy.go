@@ -240,6 +240,9 @@ func ProxyKind(proxyURL string) string {
 	if err != nil {
 		return "unknown"
 	}
+	if parsed.Host == "" || parsed.RawQuery != "" || parsed.Fragment != "" || (parsed.Path != "" && parsed.Path != "/") {
+		return "unknown"
+	}
 	switch strings.ToLower(parsed.Scheme) {
 	case "http", "https", "socks5", "socks5h":
 		return strings.ToLower(parsed.Scheme)

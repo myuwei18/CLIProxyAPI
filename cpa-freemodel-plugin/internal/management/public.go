@@ -230,10 +230,22 @@ func maskProxy(proxyURL string) string {
 		return proxyURL
 	}
 	parsed, err := url.Parse(proxyURL)
-	if err != nil || parsed.User == nil {
-		return proxyURL
+	if err != nil {
+		return "redacted-proxy"
 	}
-	parsed.User = url.UserPassword(parsed.User.Username(), "***")
+	if parsed.User != nil {
+		parsed.User = url.UserPassword(parsed.User.Username(), "***")
+	}
+	if parsed.RawQuery != "" {
+		query := parsed.Query()
+		for key := range query {
+			lower := strings.ToLower(key)
+			if strings.Contains(lower, "token") || strings.Contains(lower, "key") || strings.Contains(lower, "secret") || strings.Contains(lower, "pass") || strings.Contains(lower, "auth") || strings.Contains(lower, "session") {
+				query.Set(key, "redacted")
+			}
+		}
+		parsed.RawQuery = query.Encode()
+	}
 	return parsed.String()
 }
 
