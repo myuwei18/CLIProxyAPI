@@ -36,6 +36,11 @@ type proxySubscriptionImportResult struct {
 	ImportedPreview []publicProxyNode `json:"imported_preview,omitempty"`
 }
 
+type proxySubscriptionCandidate struct {
+	URL  string
+	Kind string
+}
+
 type publicProxyNode struct {
 	ID            int64  `json:"id"`
 	Name          string `json:"name"`
@@ -142,17 +147,23 @@ func importProxySubscription(ctx context.Context, db *store.Store, input proxySu
 	if errFetch != nil {
 		return result, fmt.Errorf("subscription fetch failed: %s", safeProxyError(errFetch))
 	}
-	lines := parseProxySubscriptionLines(string(body))
-	result.Total = len(lines)
+	candidates := parseProxySubscription(string(body))
+	result.Total = len(candidates)
 	prefix := strings.TrimSpace(input.NamePrefix)
 	if prefix == "" {
 		prefix = "sub"
 	}
-	for idx, line := range lines {
-		kind := store.ProxyKind(line)
-		if kind == "unknown" || kind == "direct" {
+	for idx, candidate := range candidates {
+		line := candidate.URL
+		kind := candidate.Kind
+		if kind == "" {
+			kind = store.ProxyKind(line)
+		}
+		if kind == "unknown" || kind == "direct" || line == "" {
 			result.Skipped++
-			if parsed, err := url.Parse(line); err == nil && parsed.Scheme != "" {
+			if kind != "" {
+				result.Schemes[kind]++
+			} else if parsed, err := url.Parse(line); err == nil && parsed.Scheme != "" {
 				result.Schemes[strings.ToLower(parsed.Scheme)]++
 			}
 			continue
@@ -204,7 +215,7 @@ func fetchProxySubscription(subURL string) ([]byte, error) {
 	return body, nil
 }
 
-func parseProxySubscriptionLines(raw string) []string {
+func parseProxySubscription(raw string) []proxySubscriptionCandidate {
 	content := strings.TrimSpace(raw)
 	if content == "" {
 		return nil
@@ -214,8 +225,13 @@ func parseProxySubscriptionLines(raw string) []string {
 	} else if decoded, err := base64.RawStdEncoding.DecodeString(content); err == nil && looksLikeProxyList(string(decoded)) {
 		content = string(decoded)
 	}
+	if strings.Contains(content, "proxies:") {
+		if parsed := parseClashYAMLProxies(content); len(parsed) > 0 {
+			return parsed
+		}
+	}
 	seen := map[string]bool{}
-	lines := make([]string, 0)
+	items := make([]proxySubscriptionCandidate, 0)
 	for _, line := range strings.FieldsFunc(content, func(r rune) bool { return r == '\n' || r == '\r' || r == '\t' }) {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -223,10 +239,128 @@ func parseProxySubscriptionLines(raw string) []string {
 		}
 		if !seen[line] {
 			seen[line] = true
-			lines = append(lines, line)
+			items = append(items, proxySubscriptionCandidate{URL: line, Kind: store.ProxyKind(line)})
 		}
 	}
-	return lines
+	return items
+}
+
+func parseClashYAMLProxies(content string) []proxySubscriptionCandidate {
+	lines := strings.Split(content, "\n")
+	inProxies := false
+	var current map[string]string
+	out := make([]proxySubscriptionCandidate, 0)
+	flush := func() {
+		if current == nil {
+			return
+		}
+		proxyURL, kind := clashProxyURL(current)
+		if kind != "" {
+			out = append(out, proxySubscriptionCandidate{URL: proxyURL, Kind: kind})
+		}
+		current = nil
+	}
+	for _, rawLine := range lines {
+		line := strings.TrimRight(rawLine, " \t\r")
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		if !inProxies {
+			if trimmed == "proxies:" {
+				inProxies = true
+			}
+			continue
+		}
+		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "-") {
+			break
+		}
+		if strings.HasPrefix(trimmed, "-") {
+			flush()
+			current = map[string]string{}
+			trimmed = strings.TrimSpace(strings.TrimPrefix(trimmed, "-"))
+			if strings.HasPrefix(trimmed, "{") && strings.HasSuffix(trimmed, "}") {
+				current = parseClashInlineMap(trimmed)
+				flush()
+				continue
+			}
+			if trimmed == "" {
+				continue
+			}
+		}
+		if current == nil {
+			continue
+		}
+		key, value, ok := splitClashKeyValue(trimmed)
+		if ok {
+			current[key] = value
+		}
+	}
+	flush()
+	return dedupeCandidates(out)
+}
+
+func parseClashInlineMap(line string) map[string]string {
+	line = strings.TrimSpace(line)
+	line = strings.TrimPrefix(line, "{")
+	line = strings.TrimSuffix(line, "}")
+	out := map[string]string{}
+	for _, part := range strings.Split(line, ",") {
+		key, value, ok := splitClashKeyValue(strings.TrimSpace(part))
+		if ok {
+			out[key] = value
+		}
+	}
+	return out
+}
+
+func splitClashKeyValue(line string) (string, string, bool) {
+	idx := strings.Index(line, ":")
+	if idx <= 0 {
+		return "", "", false
+	}
+	key := strings.TrimSpace(line[:idx])
+	value := strings.TrimSpace(line[idx+1:])
+	value = strings.Trim(value, "'\"")
+	return key, value, key != ""
+}
+
+func clashProxyURL(item map[string]string) (string, string) {
+	kind := strings.ToLower(strings.TrimSpace(item["type"]))
+	switch kind {
+	case "http", "https", "socks5":
+	default:
+		return "", kind
+	}
+	host := strings.TrimSpace(item["server"])
+	port := strings.TrimSpace(item["port"])
+	if host == "" || port == "" {
+		return "", kind
+	}
+	scheme := kind
+	username := strings.TrimSpace(item["username"])
+	if username == "" {
+		username = strings.TrimSpace(item["user"])
+	}
+	password := strings.TrimSpace(item["password"])
+	if username != "" || password != "" {
+		return scheme + "://" + url.UserPassword(username, password).String() + "@" + host + ":" + port, kind
+	}
+	return scheme + "://" + host + ":" + port, kind
+}
+
+func dedupeCandidates(items []proxySubscriptionCandidate) []proxySubscriptionCandidate {
+	seen := map[string]bool{}
+	out := make([]proxySubscriptionCandidate, 0, len(items))
+	for _, item := range items {
+		key := item.Kind + "|" + item.URL
+		if key == "|" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, item)
+	}
+	return out
 }
 
 func looksLikeProxyList(value string) bool {

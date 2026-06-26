@@ -164,6 +164,16 @@ func (s *Store) GetAccount(ctx context.Context, email string) (*Account, error) 
 	return scanAccount(row)
 }
 
+// GetAccountByID returns one account by local account id.
+func (s *Store) GetAccountByID(ctx context.Context, id int64) (*Account, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT id, email, user_id, cookie, model_api_key, proxy, created_at, updated_at
+		FROM fm_account
+		WHERE id = ?
+	`, id)
+	return scanAccount(row)
+}
+
 // ListAccounts returns configured accounts without cookies in JSON output.
 func (s *Store) ListAccounts(ctx context.Context) ([]Account, error) {
 	rows, err := s.db.QueryContext(ctx, `
@@ -240,6 +250,18 @@ func (s *Store) DeleteAccount(ctx context.Context, email string) error {
 		return fmt.Errorf("delete account: %w", err)
 	}
 	return tx.Commit()
+}
+
+// DeleteAccountByID deletes an account and its snapshots by account id.
+func (s *Store) DeleteAccountByID(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return errors.New("account id is required")
+	}
+	account, err := s.GetAccountByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	return s.DeleteAccount(ctx, account.Email)
 }
 
 // UpdateAccountProxy updates an account proxy without changing its cookie.
@@ -468,11 +490,18 @@ func setAvailability(snap *QuotaSnapshot) {
 }
 
 func extraAvailableCents(snap QuotaSnapshot) int64 {
-	referralAvailable := snap.ReferralCredits - snap.ReferralUsed
+	// FreeModel /api/billing.totalTopupGbpPence is a historical top-up total in
+	// current dashboard responses, not the live extra balance shown by the UI.
+	// The dashboard "other balance" matches /api/referral.used for current
+	// accounts, while creditCents remains a direct live credit field.
+	referralAvailable := snap.ReferralUsed
+	if snap.ReferralCredits > 0 {
+		referralAvailable = snap.ReferralCredits - snap.ReferralUsed
+	}
 	if referralAvailable < 0 {
 		referralAvailable = 0
 	}
-	extra := snap.TopupCents + snap.CreditCents + int64(math.Round(referralAvailable*100))
+	extra := snap.CreditCents + int64(math.Round(referralAvailable*100))
 	if extra < 0 {
 		return 0
 	}
