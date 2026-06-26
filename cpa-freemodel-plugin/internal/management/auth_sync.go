@@ -31,11 +31,19 @@ func handleSendOTP(req managementRequest) ([]byte, error) {
 		return methodNotAllowed()
 	}
 	var input struct {
-		Email string `json:"email"`
-		Proxy string `json:"proxy"`
+		Email   string `json:"email"`
+		Proxy   string `json:"proxy"`
+		ProxyID int64  `json:"proxy_id"`
 	}
 	if errDecode := json.Unmarshal(req.Body, &input); errDecode != nil {
 		return jsonResponse(http.StatusBadRequest, failure("invalid request: "+errDecode.Error()))
+	}
+	if input.ProxyID > 0 {
+		if db, errStore := runtimeState.getStore(); errStore == nil {
+			if node, errProxy := db.GetProxy(context.Background(), input.ProxyID); errProxy == nil && node.Enabled {
+				input.Proxy = node.URL
+			}
+		}
 	}
 	client, errClient := freemodelsvc.NewClient(input.Proxy)
 	if errClient != nil {
@@ -56,12 +64,18 @@ func handleVerifyOTP(req managementRequest) ([]byte, error) {
 		return jsonResponse(http.StatusServiceUnavailable, failure(err.Error()))
 	}
 	var input struct {
-		Email string `json:"email"`
-		Code  string `json:"code"`
-		Proxy string `json:"proxy"`
+		Email   string `json:"email"`
+		Code    string `json:"code"`
+		Proxy   string `json:"proxy"`
+		ProxyID int64  `json:"proxy_id"`
 	}
 	if errDecode := json.Unmarshal(req.Body, &input); errDecode != nil {
 		return jsonResponse(http.StatusBadRequest, failure("invalid request: "+errDecode.Error()))
+	}
+	if input.ProxyID > 0 {
+		if node, errProxy := db.GetProxy(context.Background(), input.ProxyID); errProxy == nil && node.Enabled {
+			input.Proxy = node.URL
+		}
 	}
 	client, errClient := freemodelsvc.NewClient(input.Proxy)
 	if errClient != nil {

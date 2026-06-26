@@ -23,11 +23,14 @@ func incidentFromSyncError(accountEmail string, err error) store.Incident {
 		Kind:         "sync_error",
 		Severity:     "warning",
 		StatusCode:   statusCode,
-		Message:      message,
+		Message:      sanitizeSyncMessage(message),
 		AccountEmail: accountEmail,
 		DetectedAt:   time.Now().UTC(),
 	}
 	switch {
+	case strings.Contains(lower, "proxy") || strings.Contains(lower, "connect") || strings.Contains(lower, "connection refused") || strings.Contains(lower, "no such host") || strings.Contains(lower, "timeout") || strings.Contains(lower, "eof"):
+		incident.Kind = "proxy_failed"
+		incident.Severity = "warning"
 	case statusCode == 401:
 		incident.Kind = "auth_invalid"
 		incident.Severity = "critical"
@@ -69,7 +72,19 @@ func syncErrorMessage(err error) string {
 	if err == nil {
 		return ""
 	}
-	msg := err.Error()
+	return sanitizeSyncMessage(err.Error())
+}
+
+func sanitizeSyncMessage(msg string) string {
+	msg = strings.TrimSpace(msg)
+	if msg == "" {
+		return ""
+	}
+	for _, marker := range []string{"password", "token", "authorization", "cookie", "session", "fe_oa_"} {
+		if strings.Contains(strings.ToLower(msg), marker) {
+			return "upstream request failed"
+		}
+	}
 	if len(msg) > 300 {
 		return fmt.Sprintf("%s...", msg[:300])
 	}

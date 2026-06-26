@@ -73,7 +73,8 @@ func (s *Service) SyncAll(ctx context.Context) (*SyncResult, error) {
 		client, errClient := NewClient(account.Proxy)
 		if errClient != nil {
 			item.Status = "error"
-			item.Message = errClient.Error()
+			item.Message = syncErrorMessage(errClient)
+			_, _ = s.store.SaveIncident(ctx, store.Incident{Kind: "proxy_failed", Severity: "warning", Message: syncErrorMessage(errClient), AccountEmail: account.Email, DetectedAt: time.Now().UTC()})
 			result.Failed++
 			result.Items = append(result.Items, item)
 			continue

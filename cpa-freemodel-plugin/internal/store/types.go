@@ -17,10 +17,12 @@ type Account struct {
 
 // AccountInput is the persisted account input accepted by the plugin API.
 type AccountInput struct {
+	AccountID   int64  `json:"account_id"`
 	Email       string `json:"email"`
 	Cookie      string `json:"cookie"`
 	ModelAPIKey string `json:"api_key"`
 	Proxy       string `json:"proxy"`
+	ProxyID     int64  `json:"proxy_id"`
 }
 
 // WindowUsage stores one FreeModel quota window.

@@ -109,6 +109,9 @@ CREATE INDEX IF NOT EXISTS idx_snapshot_fetched ON fm_quota_snapshot(fetched_at 
 	if err := createOpsTables(ctx, s.db); err != nil {
 		return err
 	}
+	if err := createProxyTables(ctx, s.db); err != nil {
+		return err
+	}
 
 	migrations := []string{
 		"ALTER TABLE fm_account ADD COLUMN user_id INTEGER DEFAULT 0",
@@ -256,6 +259,30 @@ func (s *Store) UpdateAccountProxy(ctx context.Context, email, proxy string) (*A
 		return nil, sql.ErrNoRows
 	}
 	return s.GetAccount(ctx, email)
+}
+
+// UpdateAccountProxyByID updates an account proxy by local account id.
+func (s *Store) UpdateAccountProxyByID(ctx context.Context, id int64, proxy string) (*Account, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	result, err := s.db.ExecContext(ctx, `
+		UPDATE fm_account
+		SET proxy = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ?
+	`, strings.TrimSpace(proxy), id)
+	if err != nil {
+		return nil, fmt.Errorf("update proxy: %w", err)
+	}
+	count, _ := result.RowsAffected()
+	if count == 0 {
+		return nil, sql.ErrNoRows
+	}
+	row := s.db.QueryRowContext(ctx, `
+		SELECT id, email, user_id, cookie, model_api_key, proxy, created_at, updated_at
+		FROM fm_account
+		WHERE id = ?
+	`, id)
+	return scanAccount(row)
 }
 
 func markSnapshotAccountState(snap *QuotaSnapshot, account Account) {
