@@ -118,6 +118,7 @@ func (s *Store) ListSnapshots(ctx context.Context, limit int) ([]QuotaSnapshot, 
 		}
 		if account, errAccount := s.GetAccount(ctx, snap.Email); errAccount == nil {
 			snap.Proxy = account.Proxy
+			markSnapshotAccountState(snap, *account)
 		}
 		snap.SyncStatus = "ready"
 		setRemaining(snap)
